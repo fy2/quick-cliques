@@ -2,8 +2,9 @@ use strict;
 use warnings;
 use feature 'say';
 
-open my $fh, '<', $ARGV[0] or die "$!";
-
+open my $fh,      '<', $ARGV[0]                or die "$!";
+open my $fh_num,  '>', $ARGV[0] . '.compat'    or die "$!";
+open my $fh_back, '>', $ARGV[0] . '.trans.txt' or die "$!";
 my %uniq_pairs;
 my %samps;
 while (<$fh>) {
@@ -24,6 +25,7 @@ while (<$fh>) {
 
 my $i = 0;
 my %trans;
+my %back;
 my @output;
 
 foreach my $upair (keys %uniq_pairs) {
@@ -31,6 +33,7 @@ foreach my $upair (keys %uniq_pairs) {
 
     if (not exists $trans{$first} ) {
         $trans{$first} = $i;
+        $back{$i} = $first;
         $i++;
     }
 
@@ -38,6 +41,7 @@ foreach my $upair (keys %uniq_pairs) {
 
     if (not exists $trans{$second} ) {
         $trans{$second} = $i;
+        $back{$i} = $second;
         $i++;
     }
 
@@ -50,10 +54,24 @@ foreach my $upair (keys %uniq_pairs) {
 
 }
 
-say scalar keys %samps;
-say scalar @output;
+say $fh_num scalar keys %samps;
+say $fh_num scalar @output;
 
 foreach my $pair ( sort { $a->[0] <=> $b->[0] || $a->[1] <=> $b->[1] } @output )  {
-    say "$pair->[0],$pair->[1]";
+    say $fh_num "$pair->[0],$pair->[1]";
 }
 
+close $fh_num;
+
+#system("./bin/compdegen < $ARGV[0].compat");
+system("./bin/qc --algorithm=tomita --input-file=$ARGV[0].compat > $ARGV[0].out 2>/dev/null");
+
+open my $fh_out, '<', "$ARGV[0].out" or die "$!";
+while(<$fh_out>) {
+    chomp;
+    my $line = $_;
+    if ($line =~ /^\d/) {
+        my @vertices = split ' ', $_;
+        say join ',',  map { $back{$_} if $back{$_} } @vertices;
+    }
+}
