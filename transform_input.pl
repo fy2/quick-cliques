@@ -4,7 +4,6 @@ use feature 'say';
 
 open my $fh,      '<', $ARGV[0]                or die "$!";
 open my $fh_num,  '>', $ARGV[0] . '.compat'    or die "$!";
-open my $fh_back, '>', $ARGV[0] . '.trans.txt' or die "$!";
 my %uniq_pairs;
 my %samps;
 while (<$fh>) {
@@ -66,12 +65,17 @@ close $fh_num;
 #system("./bin/compdegen < $ARGV[0].compat");
 system("./bin/qc --algorithm=tomita --input-file=$ARGV[0].compat > $ARGV[0].out 2>/dev/null");
 
-open my $fh_out, '<', "$ARGV[0].out" or die "$!";
+open my $fh_out,  '<', "$ARGV[0].out" or die "$!";
+open my $fh_back, '>', $ARGV[0] . '.clique.txt' or die "$!";
 while(<$fh_out>) {
     chomp;
     my $line = $_;
     if ($line =~ /^\d/) {
         my @vertices = split ' ', $_;
-        say join ',',  map { $back{$_} if $back{$_} } @vertices;
+        say $fh_back join ',',  map { $back{$_} if $back{$_} } @vertices;
     }
 }
+close $fh_out;
+close $fh_back;
+unlink "$ARGV[0].out";
+unlink "$ARGV[0].compat";
